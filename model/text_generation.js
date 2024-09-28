@@ -1,54 +1,33 @@
 const OpenAI = require('openai');
 const dotenv = require('dotenv');
-const { PollyClient, SynthesizeSpeechCommand } = require('@aws-sdk/client-polly'); // AWS SDK v3 for Polly
+const { PollyClient, SynthesizeSpeechCommand } = require('@aws-sdk/client-polly');
+const { DynamoDBClient, PutItemCommand, GetItemCommand } = require('@aws-sdk/client-dynamodb');
 const fs = require('fs');
-const { Readable } = require('stream'); // Import the Readable stream module
+const { Readable } = require('stream');
 
-// Load environment variables from a .env file
 dotenv.config();
 
 // Initialize clients
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_KEY,
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
+const polly = new PollyClient({ region: process.env.AWS_REGION || 'us-east-1', credentials: getAWSCredentials() });
+const dynamodb = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1', credentials: getAWSCredentials() });
 
-const polly = new PollyClient({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
+function getAWSCredentials() {
+  return {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
+  };
+}
 
-// Helper functions
-const formatServices = (services) => services ? services.join(', ') : 'various services';
-const formatObjectives = (objectives) => objectives
-  ? objectives.map((obj, index) => `${index + 1}. ${obj}`).join('\n')
-  : '1. Provide excellent customer service\n2. Assist with inquiries\n3. Promote services';
-
-/**
- * Generate a response using OpenAI's chat-based model based on business info and chat history.
- * @param {Object} business_info - Contains the business name, services, and objectives path.
- * @param {Array} chat_history - List of previous interactions.
- * @returns {String} - AI-generated response.
- */
-async function generateResponse(business_info, chat_history) {
+async function generateResponse(business_info, latest_user_message) {
   try {
-    const { name: businessName, services, objectives } = business_info;
+    const chatHistory = await getChatHistory();
     const messages = [
-      {
-        role: 'system',
-        content: `You are a customer service AI assistant for ${businessName}. The company offers ${formatServices(services)}. ` +
-                 `Your main objectives are:\n${formatObjectives(objectives)}. Respond to the customer in a helpful and professional manner.`,
-      },
-      ...chat_history.flatMap(entry => [
-        { role: 'user', content: entry.customer },
-        { role: 'assistant', content: entry.ai }
-      ]),
-      { role: 'user', content: chat_history[chat_history.length - 1].customer }
+      { role: 'system', content: generateSystemPrompt(business_info) },
+      ...chatHistory,
+      { role: 'user', content: latest_user_message }
     ];
 
-    console.log('Sending request to OpenAI for generating response...');
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages,
@@ -56,21 +35,21 @@ async function generateResponse(business_info, chat_history) {
       temperature: 0.7,
     });
 
-    console.log('Response received from OpenAI: ', response.choices[0].message.content.trim());
-    return response.choices[0].message.content.trim();
+    const aiResponse = response.choices[0].message.content.trim();
+    console.log('AI Response:', aiResponse);  // Print AI response
+
+    await updateChatHistory(chatHistory, latest_user_message, aiResponse);
+    await storeCustomerInfo(latest_user_message, aiResponse);
+
+    return { aiResponse, chatHistory };
   } catch (error) {
     console.error('Error generating response:', error);
-    return 'Sorry, I encountered an issue generating a response.';
+    return { aiResponse: 'Sorry, I encountered an issue generating a response.', chatHistory: [] };
   }
 }
 
-/**
- * Convert the generated text response into speech using Amazon Polly.
- * @param {String} text - The text to convert into speech.
- */
 async function textToSpeech(text) {
   try {
-    console.log('Sending request to Amazon Polly for text-to-speech conversion...');
     const { AudioStream } = await polly.send(new SynthesizeSpeechCommand({
       OutputFormat: 'mp3',
       Text: text,
@@ -81,19 +60,21 @@ async function textToSpeech(text) {
 
     if (!AudioStream) throw new Error('AudioStream is empty or undefined');
 
-    console.log('Received AudioStream from Polly. Processing the audio stream...');
     const audioBuffer = await streamToBuffer(AudioStream);
-    
     const fileName = 'response.mp3';
     fs.writeFileSync(fileName, audioBuffer);
-    
-    console.log(`Audio saved successfully as ${fileName} (${audioBuffer.length} bytes).`);
+
+    // Confirm if audio file was created
+    if (fs.existsSync(fileName)) {
+      console.log(`Audio file '${fileName}' has been successfully created.`);
+    } else {
+      console.log(`Failed to create audio file '${fileName}'.`);
+    }
   } catch (error) {
     console.error('Error converting text to speech:', error);
   }
 }
 
-// Helper function to convert stream to buffer
 async function streamToBuffer(stream) {
   const chunks = [];
   for await (const chunk of Readable.from(stream)) {
@@ -102,25 +83,79 @@ async function streamToBuffer(stream) {
   return Buffer.concat(chunks);
 }
 
-// Example usage for testing
-(async () => {
-  const business_info = {
-    name: 'Tech Solutions Inc.',
-    services: ['IT support', 'cloud services', 'software development'],
-    objectives: [
-      'Assist customers in understanding our IT and cloud services.',
-      'Guide potential customers to book a consultation call.',
-      'Encourage clients to make a purchase or upgrade their existing service plans.',
-    ],
-  };
+function generateSystemPrompt(business_info) {
+  const { name, services, objectives } = business_info;
+  return `
+    You are a customer service AI assistant for ${name}. 
+    The company offers ${services.join(', ')}. 
+    Your main objectives are: ${objectives.join(', ')}. 
+    Respond to the customer in a helpful and professional manner.
+  `;
+}
 
-  const chat_history = [
-    { customer: 'Hello, I’m looking for cloud solutions.', ai: 'Hi there! We provide various cloud services, including migration and management. How can I assist you today?' },
-    { customer: 'Can you tell me more about cloud migration?', ai: 'Sure! Our cloud migration services include strategy planning, data transfer, and integration.' },
-  ];
+async function getChatHistory() {
+  try {
+    const { Item } = await dynamodb.send(new GetItemCommand({
+      TableName: 'ChatHistory',
+      Key: { SessionId: { S: 'current_session' } }
+    }));
+    return Item ? JSON.parse(Item.History.S) : [];
+  } catch (error) {
+    console.error('Error retrieving chat history:', error);
+    return [];
+  }
+}
 
-  const aiResponse = await generateResponse(business_info, chat_history);
-  console.log('Generated AI Response:', aiResponse);
+async function updateChatHistory(chatHistory, userMessage, aiResponse) {
+  try {
+    chatHistory.push({ role: 'user', content: userMessage });
+    chatHistory.push({ role: 'assistant', content: aiResponse });
+    
+    await dynamodb.send(new PutItemCommand({
+      TableName: 'ChatHistory',
+      Item: {
+        SessionId: { S: 'current_session' },
+        History: { S: JSON.stringify(chatHistory) },
+        Timestamp: { N: Date.now().toString() }
+      }
+    }));
+  } catch (error) {
+    console.error('Error updating chat history:', error);
+  }
+}
 
-  await textToSpeech(aiResponse); // Convert the generated text to speech using Polly
-})();
+async function storeCustomerInfo(userMessage, aiResponse) {
+  try {
+    const scheduledCall = extractScheduledCall(userMessage, aiResponse);
+    if (scheduledCall) {
+      await dynamodb.send(new PutItemCommand({
+        TableName: 'CustomerInteractions',
+        Item: {
+          CustomerId: { S: `customer_${Date.now()}` },
+          Timestamp: { N: Date.now().toString() },
+          UserMessage: { S: userMessage },
+          AIResponse: { S: aiResponse },
+          ScheduledCall: { S: scheduledCall },
+        },
+      }));
+    }
+  } catch (error) {
+    console.error('Error storing customer information:', error);
+  }
+}
+
+function extractScheduledCall(userMessage, aiResponse) {
+  const combinedText = `${userMessage} ${aiResponse}`.toLowerCase();
+  const dateRegex = /(\d{1,2}(st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4}|\d{4}-\d{2}-\d{2})/i;
+  const timeRegex = /(\d{1,2}:\d{2}\s*(am|pm)?)/i;
+
+  const dateMatch = combinedText.match(dateRegex);
+  const timeMatch = combinedText.match(timeRegex);
+
+  return (dateMatch && timeMatch) ? `${dateMatch[0]} at ${timeMatch[0]}` : null;
+}
+
+module.exports = {
+  generateResponse,
+  textToSpeech,
+};

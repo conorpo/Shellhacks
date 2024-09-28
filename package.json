@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/ColtonsProjects/Shellhacks#readme",
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.658.1",
     "@aws-sdk/client-polly": "^3.658.1",
     "@google-cloud/speech": "^6.7.0",
     "dotenv": "^16.4.5",

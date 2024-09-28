@@ -21,8 +21,7 @@ function main() {
   }));
 
   
-//   http.createServer(app).listen(80);
-  https.createServer(options, app).listen(443);
+  const server = https.createServer(options, app).listen(443);
 
   //initiate_call({},"4074350184");
 }
