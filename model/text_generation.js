@@ -7,12 +7,11 @@ const { Readable } = require('stream'); // Import the Readable stream module
 // Load environment variables from a .env file
 dotenv.config();
 
-// Initialize OpenAI client
+// Initialize clients
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_KEY,
 });
 
-// Initialize Polly client with AWS SDK v3
 const polly = new PollyClient({
   region: process.env.AWS_REGION || 'us-east-1',
   credentials: {
@@ -20,6 +19,12 @@ const polly = new PollyClient({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
 });
+
+// Helper functions
+const formatServices = (services) => services ? services.join(', ') : 'various services';
+const formatObjectives = (objectives) => objectives
+  ? objectives.map((obj, index) => `${index + 1}. ${obj}`).join('\n')
+  : '1. Provide excellent customer service\n2. Assist with inquiries\n3. Promote services';
 
 /**
  * Generate a response using OpenAI's chat-based model based on business info and chat history.
@@ -30,38 +35,28 @@ const polly = new PollyClient({
 async function generateResponse(business_info, chat_history) {
   try {
     const { name: businessName, services, objectives } = business_info;
-
-    const formattedServices = services ? services.join(', ') : 'various services';
-    const formattedObjectives = objectives
-      ? objectives.map((obj, index) => `${index + 1}. ${obj}`).join('\n')
-      : '1. Provide excellent customer service\n2. Assist with inquiries\n3. Promote services';
-
     const messages = [
       {
         role: 'system',
-        content: `You are a customer service AI assistant for ${businessName}. The company offers ${formattedServices}. ` +
-                 `Your main objectives are:\n${formattedObjectives}. Respond to the customer in a helpful and professional manner.`,
+        content: `You are a customer service AI assistant for ${businessName}. The company offers ${formatServices(services)}. ` +
+                 `Your main objectives are:\n${formatObjectives(objectives)}. Respond to the customer in a helpful and professional manner.`,
       },
+      ...chat_history.flatMap(entry => [
+        { role: 'user', content: entry.customer },
+        { role: 'assistant', content: entry.ai }
+      ]),
+      { role: 'user', content: chat_history[chat_history.length - 1].customer }
     ];
 
-    chat_history.forEach((entry) => {
-      messages.push({ role: 'user', content: entry.customer });
-      messages.push({ role: 'assistant', content: entry.ai });
-    });
-
-    messages.push({ role: 'user', content: chat_history[chat_history.length - 1].customer });
-
     console.log('Sending request to OpenAI for generating response...');
-
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      messages: messages,
+      messages,
       max_tokens: 150,
       temperature: 0.7,
     });
 
     console.log('Response received from OpenAI: ', response.choices[0].message.content.trim());
-
     return response.choices[0].message.content.trim();
   } catch (error) {
     console.error('Error generating response:', error);
@@ -74,53 +69,37 @@ async function generateResponse(business_info, chat_history) {
  * @param {String} text - The text to convert into speech.
  */
 async function textToSpeech(text) {
-  const params = {
-    OutputFormat: 'mp3',
-    Text: text,
-    VoiceId: 'Joanna', // Choose any Polly voice
-  };
-
   try {
     console.log('Sending request to Amazon Polly for text-to-speech conversion...');
-    const command = new SynthesizeSpeechCommand(params);
-    const data = await polly.send(command);
+    const { AudioStream } = await polly.send(new SynthesizeSpeechCommand({
+      OutputFormat: 'mp3',
+      Text: text,
+      TextType: 'text',
+      VoiceId: 'Matthew',
+      Engine: 'neural',
+    }));
 
-    // Debug: Check the type of AudioStream and its content
-    if (!data.AudioStream) {
-      throw new Error('AudioStream is empty or undefined');
-    }
+    if (!AudioStream) throw new Error('AudioStream is empty or undefined');
 
     console.log('Received AudioStream from Polly. Processing the audio stream...');
-
-    // Convert the audio stream into a buffer
-    const audioStream = data.AudioStream;
-    const chunks = [];
-    for await (const chunk of Readable.from(audioStream)) {
-      chunks.push(chunk);
-    }
-
-    // Debug: Check if chunks have been correctly populated
-    if (chunks.length === 0) {
-      throw new Error('No audio data received in chunks.');
-    }
-
-    const audioBuffer = Buffer.concat(chunks);
-
-    // Debug: Output size of the buffer
-    console.log(`Audio Buffer Size: ${audioBuffer.length} bytes`);
-
-    // Save the audio buffer as an MP3 file
+    const audioBuffer = await streamToBuffer(AudioStream);
+    
     const fileName = 'response.mp3';
     fs.writeFileSync(fileName, audioBuffer);
-
-    // Debug: Check file size after saving
-    const stats = fs.statSync(fileName);
-    console.log(`File Saved: ${fileName} (${stats.size} bytes)`);
-
-    console.log(`Audio saved successfully as ${fileName}.`);
+    
+    console.log(`Audio saved successfully as ${fileName} (${audioBuffer.length} bytes).`);
   } catch (error) {
     console.error('Error converting text to speech:', error);
   }
+}
+
+// Helper function to convert stream to buffer
+async function streamToBuffer(stream) {
+  const chunks = [];
+  for await (const chunk of Readable.from(stream)) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
 }
 
 // Example usage for testing

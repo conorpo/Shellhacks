@@ -2,13 +2,13 @@
   "name": "voice-vibe",
   "version": "1.0.0",
   "description": "Shellhacks 2024",
-  "main": "app.js",
+  "main": "app/entry.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "test-voice": "node model/stt.js",
     "test-call": "node model/entry.js",
     "test-model": "node model/text_generation.js",
-    "start": "node app.js"
+    "start": "node app/entry.js"
   },
   "repository": {
     "type": "git",
