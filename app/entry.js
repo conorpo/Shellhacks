@@ -6,11 +6,12 @@ const https = require('https');
 // const http = require('http');
 const { initiate_call } = require("./call_manager.js");
 const { readFileSync } = require('fs');
+const { setup_call_listener } = require("./ws.js");
+const { db_router } = require("./db.js")
 
-// Start the Express server
 const options = {
-    key: readFileSync("./.ssl/client-key.pem"),
-    cert: readFileSync("./.ssl/client-cert.pem")
+  key: readFileSync('./.ssl/privkey.pem'),
+  cert: readFileSync('./.ssl/fullchain.pem')
 };
 
 function main() {
@@ -20,8 +21,11 @@ function main() {
 
   }));
 
-  
-  const server = https.createServer(options, app).listen(443);
+
+
+  // const wss = setup_call_listener(3001);
+
+  app.listen(3000);
 
   //initiate_call({},"4074350184");
 }

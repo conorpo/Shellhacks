@@ -4,13 +4,19 @@ const { PollyClient, SynthesizeSpeechCommand } = require('@aws-sdk/client-polly'
 const { DynamoDBClient, PutItemCommand, GetItemCommand } = require('@aws-sdk/client-dynamodb');
 const fs = require('fs');
 const { Readable } = require('stream');
+const { v4: uuidv4 } = require('uuid');
 
 dotenv.config();
+
+// ______________________ INITIALIZATION ______________________
 
 // Initialize clients
 const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
 const polly = new PollyClient({ region: process.env.AWS_REGION || 'us-east-1', credentials: getAWSCredentials() });
 const dynamodb = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1', credentials: getAWSCredentials() });
+
+// Hard-coded session ID
+const CURRENT_SESSION_ID = '125678';
 
 function getAWSCredentials() {
   return {
@@ -18,6 +24,12 @@ function getAWSCredentials() {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   };
 }
+
+
+
+
+
+// ______________________ TEXT GENERATION AND SPEECH ______________________
 
 async function generateResponse(business_info, latest_user_message) {
   try {
@@ -41,12 +53,34 @@ async function generateResponse(business_info, latest_user_message) {
     await updateChatHistory(chatHistory, latest_user_message, aiResponse);
     await storeCustomerInfo(latest_user_message, aiResponse);
 
-    return { aiResponse, chatHistory };
+    // Generate speech from the AI response
+    const speechFile = await textToSpeech(aiResponse);
+
+    return { aiResponse, chatHistory, speechFile };
   } catch (error) {
     console.error('Error generating response:', error);
-    return { aiResponse: 'Sorry, I encountered an issue generating a response.', chatHistory: [] };
+    return { 
+      aiResponse: 'Sorry, I encountered an issue generating a response.', 
+      chatHistory: [],
+      speechFile: null
+    };
   }
 }
+
+function generateSystemPrompt(business_info) {
+  const { name, services, objectives } = business_info;
+  return `
+    You are a customer service AI assistant for ${name}. 
+    The company offers ${services.join(', ')}. 
+    Your main objectives are: ${objectives.join(', ')}. 
+    Respond to the customer in a helpful and professional manner.
+  `;
+}
+
+
+
+
+// ______________________ TEXT-TO-SPEECH ______________________
 
 async function textToSpeech(text) {
   try {
@@ -61,17 +95,20 @@ async function textToSpeech(text) {
     if (!AudioStream) throw new Error('AudioStream is empty or undefined');
 
     const audioBuffer = await streamToBuffer(AudioStream);
-    const fileName = 'response.mp3';
+    const fileName = `response_${Date.now()}.mp3`;
     fs.writeFileSync(fileName, audioBuffer);
 
     // Confirm if audio file was created
     if (fs.existsSync(fileName)) {
       console.log(`Audio file '${fileName}' has been successfully created.`);
+      return fileName;
     } else {
       console.log(`Failed to create audio file '${fileName}'.`);
+      return null;
     }
   } catch (error) {
     console.error('Error converting text to speech:', error);
+    return null;
   }
 }
 
@@ -83,26 +120,23 @@ async function streamToBuffer(stream) {
   return Buffer.concat(chunks);
 }
 
-function generateSystemPrompt(business_info) {
-  const { name, services, objectives } = business_info;
-  return `
-    You are a customer service AI assistant for ${name}. 
-    The company offers ${services.join(', ')}. 
-    Your main objectives are: ${objectives.join(', ')}. 
-    Respond to the customer in a helpful and professional manner.
-  `;
-}
+
+
+
+
+// ______________________ CHAT HISTORY MANAGEMENT ______________________
 
 async function getChatHistory() {
   try {
     const { Item } = await dynamodb.send(new GetItemCommand({
       TableName: 'ChatHistory',
-      Key: { SessionId: { S: 'current_session' } }
+      Key: { SessionID: { S: CURRENT_SESSION_ID } }
     }));
-    return Item ? JSON.parse(Item.History.S) : [];
+    // console.log('Item:', Item, Item.History,);
+    return Item && Item.History ? JSON.parse(Item.History.S) : [];
   } catch (error) {
     console.error('Error retrieving chat history:', error);
-    return [];
+    throw error;
   }
 }
 
@@ -114,15 +148,23 @@ async function updateChatHistory(chatHistory, userMessage, aiResponse) {
     await dynamodb.send(new PutItemCommand({
       TableName: 'ChatHistory',
       Item: {
-        SessionId: { S: 'current_session' },
+        SessionID: { S: CURRENT_SESSION_ID },
         History: { S: JSON.stringify(chatHistory) },
         Timestamp: { N: Date.now().toString() }
       }
     }));
   } catch (error) {
     console.error('Error updating chat history:', error);
+    throw error;
   }
 }
+
+
+
+
+
+
+// ______________________ CUSTOMER INFORMATION STORAGE ______________________
 
 async function storeCustomerInfo(userMessage, aiResponse) {
   try {
@@ -154,6 +196,12 @@ function extractScheduledCall(userMessage, aiResponse) {
 
   return (dateMatch && timeMatch) ? `${dateMatch[0]} at ${timeMatch[0]}` : null;
 }
+
+
+
+
+
+// ______________________ MODULE EXPORTS ______________________
 
 module.exports = {
   generateResponse,
