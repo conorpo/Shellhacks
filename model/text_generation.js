@@ -1,7 +1,8 @@
 const OpenAI = require('openai');
 const dotenv = require('dotenv');
-const AWS = require('aws-sdk');
+const { PollyClient, SynthesizeSpeechCommand } = require('@aws-sdk/client-polly'); // AWS SDK v3 for Polly
 const fs = require('fs');
+const { Readable } = require('stream'); // Import the Readable stream module
 
 // Load environment variables from a .env file
 dotenv.config();
@@ -11,11 +12,13 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_KEY,
 });
 
-// Initialize Polly client with AWS SDK
-const polly = new AWS.Polly({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+// Initialize Polly client with AWS SDK v3
+const polly = new PollyClient({
   region: process.env.AWS_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
 });
 
 /**
@@ -48,12 +51,16 @@ async function generateResponse(business_info, chat_history) {
 
     messages.push({ role: 'user', content: chat_history[chat_history.length - 1].customer });
 
+    console.log('Sending request to OpenAI for generating response...');
+
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: messages,
       max_tokens: 150,
       temperature: 0.7,
     });
+
+    console.log('Response received from OpenAI: ', response.choices[0].message.content.trim());
 
     return response.choices[0].message.content.trim();
   } catch (error) {
@@ -74,11 +81,43 @@ async function textToSpeech(text) {
   };
 
   try {
-    const data = await polly.synthesizeSpeech(params).promise();
-    const fileName = 'response.mp3';
+    console.log('Sending request to Amazon Polly for text-to-speech conversion...');
+    const command = new SynthesizeSpeechCommand(params);
+    const data = await polly.send(command);
 
-    fs.writeFileSync(fileName, data.AudioStream);
-    console.log(`Audio saved as ${fileName}`);
+    // Debug: Check the type of AudioStream and its content
+    if (!data.AudioStream) {
+      throw new Error('AudioStream is empty or undefined');
+    }
+
+    console.log('Received AudioStream from Polly. Processing the audio stream...');
+
+    // Convert the audio stream into a buffer
+    const audioStream = data.AudioStream;
+    const chunks = [];
+    for await (const chunk of Readable.from(audioStream)) {
+      chunks.push(chunk);
+    }
+
+    // Debug: Check if chunks have been correctly populated
+    if (chunks.length === 0) {
+      throw new Error('No audio data received in chunks.');
+    }
+
+    const audioBuffer = Buffer.concat(chunks);
+
+    // Debug: Output size of the buffer
+    console.log(`Audio Buffer Size: ${audioBuffer.length} bytes`);
+
+    // Save the audio buffer as an MP3 file
+    const fileName = 'response.mp3';
+    fs.writeFileSync(fileName, audioBuffer);
+
+    // Debug: Check file size after saving
+    const stats = fs.statSync(fileName);
+    console.log(`File Saved: ${fileName} (${stats.size} bytes)`);
+
+    console.log(`Audio saved successfully as ${fileName}.`);
   } catch (error) {
     console.error('Error converting text to speech:', error);
   }

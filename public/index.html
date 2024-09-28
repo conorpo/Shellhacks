@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Calling Outreach Bot Configuration</title>
+    <link rel="stylesheet" href="stylesheet.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">AI Calling Outreach Bot</h1>
+                <p class="card-description">Configure your next-gen AI sales assistant</p>
+            </div>
+            <form id="botConfigForm">
+                <div class="form-group">
+                    <label for="company-name">Company Name</label>
+                    <input type="text" id="company-name" name="company-name" required placeholder="Enter your company name">
+                </div>
+                <div class="form-group">
+                    <label for="services">Services Provided</label>
+                    <textarea id="services" name="services" required placeholder="Describe the cutting-edge services your company offers"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>AI Bot Objectives</label>
+                    <ul id="objectives-list" class="objectives-list">
+                        <li class="objective-item">
+                            <input type="text" name="objectives[]" required placeholder="e.g., Schedule a VR demo call">
+                        </li>
+                    </ul>
+                    <button type="button" id="add-objective" class="btn-add">+ Add Objective</button>
+                </div>
+                <button type="submit" class="btn-submit">Activate AI Configuration</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

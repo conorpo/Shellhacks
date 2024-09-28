@@ -1,53 +1,34 @@
-const fs = require('fs');
-const path = require('path');
-const wav = require('node-wav');
+
+require('dotenv').config();
+// Imports the Google Cloud client library
 const speech = require('@google-cloud/speech');
 
-
-// Create a client for Google Cloud Speech-to-Text
+// Creates a client
 const client = new speech.SpeechClient();
 
-// Read the audio file
-const audioFilePath = path.join(__dirname, '../untitled.wav');
-const audio_chunk = fs.readFileSync(audioFilePath);
+async function quickstart() {
+  // The path to the remote LINEAR16 file
+  const gcsUri = 'gs://cloud-samples-data/speech/brooklyn_bridge.raw';
 
-function getAudioProperties(filePath) {
-    const buffer = fs.readFileSync(filePath);
-    const result = wav.decode(buffer);
-    return result.sampleRate; // Extract sample rate
+  // The audio file's encoding, sample rate in hertz, and BCP-47 language code
+  const audio = {
+    uri: gcsUri,
+  };
+  const config = {
+    encoding: 'LINEAR16',
+    sampleRateHertz: 16000,
+    languageCode: 'en-US',
+  };
+  const request = {
+    audio: audio,
+    config: config,
+  };
+
+  // Detects speech in the audio file
+  const [response] = await client.recognize(request);
+  const transcription = response.results
+    .map(result => result.alternatives[0].transcript)
+    .join('\n');
+  console.log(`Transcription: ${transcription}`);
 }
-
-async function generate_text(audio_chunk) {
-    console.log("Processing audio...");
-
-    // Convert audio file to base64
-    const audioBytes = audio_chunk.toString('base64');
-
-    try {
-     
-       
-
-        const request = {
-            audio: {
-                content: audioBytes,
-            },
-            config: {
-                encoding: 'LINEAR16', // Ensure this matches your audio file's format
-                sampleRateHertz: 16000, // Use the dynamically determined sample rate
-                languageCode: 'en-US',
-            },
-        };
-
-        // Detects speech in the audio file
-        const [response] = await client.recognize(request);
-        const transcription = response.results
-            .map(result => result.alternatives[0].transcript)
-            .join('\n');
-
-        console.log(`Transcription: ${transcription}`);
-    } catch (error) {
-        console.error('Error during transcription:', error);
-    }
-}
-
-generate_text(audio_chunk);
+quickstart();

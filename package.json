@@ -2,11 +2,13 @@
   "name": "voice-vibe",
   "version": "1.0.0",
   "description": "Shellhacks 2024",
-  "main": "main.js",
+  "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "test-voice": "node model/stt.js",
-    "test-call": "node model/entry.js"
+    "test-call": "node model/entry.js",
+    "test-model": "node model/text_generation.js",
+    "start": "node app.js"
   },
   "repository": {
     "type": "git",
@@ -19,9 +21,11 @@
   },
   "homepage": "https://github.com/ColtonsProjects/Shellhacks#readme",
   "dependencies": {
+    "@aws-sdk/client-polly": "^3.658.1",
     "@google-cloud/speech": "^6.7.0",
     "dotenv": "^16.4.5",
     "env": "^0.0.2",
+    "express": "^4.21.0",
     "fluent-ffmpeg": "^2.1.3",
     "node-wav": "^0.0.2",
     "openai": "^4.65.0",
