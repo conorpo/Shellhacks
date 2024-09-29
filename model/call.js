@@ -5,7 +5,7 @@ async function createCall(client, call) {
         twiml: 
         `<Response>
         <Start>
-            <Stream name="Example Audio Stream" url="wss://ec2-44-195-80-243.compute-1.amazonaws.com:${call.port}/" />
+            <Stream name="Example Audio Stream" url="wss://0fd4aerzzf.execute-api.us-east-1.amazonaws.com/production/" />
         </Start>
         <Say>Hello Conor, would you like to play a game.!</Say>
         </Response>`,

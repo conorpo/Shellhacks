@@ -27,13 +27,13 @@ document.addEventListener('DOMContentLoaded', function() {
       const formData = new FormData(form);
       const data = {
           companyName: formData.get('company-name'),
-          services: formData.get('services').split(',').map(s => s.trim()),
+          services: formData.get('services'),
           objectives: formData.getAll('objectives[]')
       };
       console.log('AI Bot Configuration:', data);
 
       try {
-          const response = await fetch('/api/configure-ai', {
+          const response = await fetch('./api/configure-ai', {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',
