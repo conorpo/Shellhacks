@@ -3,58 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Calling Outreach Bot Configuration</title>
-    <link rel="stylesheet" href="stylesheet.css"> <!-- Link to the updated stylesheet -->
+    <title>Login / Register - AI Calling Outreach Bot</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <style>
+        :root {
+            --background: #0a0a0a;
+            --foreground: #ffffff;
+            --primary: #00ffff;
+            --primary-glow: rgba(0, 255, 255, 0.35);
+            --secondary: #ff00ff;
+            --secondary-glow: rgba(255, 0, 255, 0.35);
+            --muted: #2a2a2a;
+            --muted-foreground: #a0a0a0;
+            --border: #333333;
+            --input: #1a1a1a;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.5;
+            color: var(--foreground);
+            background-color: var(--background);
+            margin: 0;
+            padding: 20px;
+            background-image: 
+                radial-gradient(circle at 10% 20%, var(--primary-glow) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, var(--secondary-glow) 0%, transparent 20%);
+            background-attachment: fixed;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .card {
+            background-color: rgba(26, 26, 26, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .card-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .card-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--primary);
+            text-shadow: 0 0 10px var(--primary-glow);
+            margin-bottom: 10px;
+        }
+
+        .card-description {
+            color: var(--muted-foreground);
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="email-t"] {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--input);
+            color: var(--foreground);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="email-t"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        button {
+            background-color: var(--primary);
+            color: var(--background);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: var(--secondary);
+            box-shadow: 0 0 15px var(--secondary-glow);
+        }
+
+        .toggle-form {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--muted-foreground);
+        }
+
+        .toggle-form a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .toggle-form a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
             <div class="card-header">
-                <h1 class="card-title">AI Calling Outreach Bot</h1>
-                <p class="card-description">Configure your next-gen AI sales assistant</p>
+                <h1 class="card-title"><i class="fas fa-robot"></i> AI Calling Outreach Bot</h1>
+                <p class="card-description">Login or Register to continue</p>
             </div>
-            <form id="botConfigForm">
-                <!-- Company Name Input -->
+            <form id="loginForm">
                 <div class="form-group">
-                    <label for="company-name">Company Name</label>
-                    <input type="text" id="company-name" name="company-name" required placeholder="Enter your company name">
+                    <label for="email">Email</label>
+                    <input type="email-t" id="email" name="email" required placeholder="Enter your email">
                 </div>
-
-                <!-- Services Input -->
                 <div class="form-group">
-                    <label for="services">Services Provided</label>
-                    <textarea id="services" name="services" required placeholder="Describe the cutting-edge services your company offers"></textarea>
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Enter your password">
                 </div>
-
-                <!-- AI Bot Objectives Section -->
-                <div class="form-group">
-                    <label>AI Bot Objectives</label>
-                    <ul id="objectives-list" class="objectives-list">
-                        <li class="objective-item">
-                            <input type="text" name="objectives[]" required placeholder="e.g., Schedule a VR demo call">
-                        </li>
-                    </ul>
-                    <button type="button" id="add-objective" class="btn-add">+ Add Objective</button>
-                </div>
-
-                <!-- CSV File Upload Section -->
-                <div class="form-group">
-                    <label>Upload Call List (CSV)</label>
-                    <div class="file-upload">
-                        <label for="csv-upload" class="file-upload-label">Choose CSV File</label>
-                        <input type="file" id="csv-upload" accept=".csv" />
-                        <span class="file-name" id="file-name"></span>
-                    </div>
-                    <div id="csv-preview"></div>
-                </div>
-
-                <!-- Submit Button -->
-                <button type="submit" class="btn-submit">Activate AI Configuration</button>
+                <button type="submit" id="submitBtn">Login</button>
             </form>
+            <div class="toggle-form">
+                <p>Don't have an account? <a href="#" id="toggleForm">Register</a></p>
+            </div>
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('loginForm');
+            const toggleBtn = document.getElementById('toggleForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const cardDescription = document.querySelector('.card-description');
+            let isLoginForm = true;
 
-    <!-- JavaScript file for functionality -->
-    <script src="main.js"></script>
+            toggleBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                isLoginForm = !isLoginForm;
+                if (isLoginForm) {
+                    cardDescription.textContent = 'Login to continue';
+                    submitBtn.textContent = 'Login';
+                    toggleBtn.textContent = 'Register';
+                } else {
+                    cardDescription.textContent = 'Register to get started';
+                    submitBtn.textContent = 'Register';
+                    toggleBtn.textContent = 'Login';
+                }
+            });
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const username = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const endpoint = isLoginForm ? '../api/login' : '../api/register';
+
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ username, password }),
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        localStorage.setItem('token', data.token);
+                        window.location.href = 'homepage.html';
+                    } else {
+                        throw new Error('Authentication failed');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Authentication failed. Please try again.');
+                }
+            });
+        });
+    </script>
 </body>
 </html>

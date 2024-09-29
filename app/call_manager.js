@@ -5,31 +5,35 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 
 const twilio = require("twilio");
+const VoiceResponse = twilio.twiml.VoiceResponse;
 
-const { createCall } = require("../model/call.js");
-
+let active_calls = {};
+  
 const client = twilio(accountSid, authToken);
 
-function get_next_available_port() {
-    cur_port += 1;
-    return cur_port
-}
 
 async function initiate_call(business, phone_number) {
-    const new_call = {
-        phone_number,
-        business
-    };
+    const { opener, companyName } = business;
 
-    active_calls.push(new_call);
+    const response = new VoiceResponse();
 
-    const call = await createCall(client, new_call);
-    const call_sid = call.sid;
+    response.say(opener);
+    const start = response.connect();
+    start.stream({
+        name: `${companyName} ${phone_number} stream`,
+        url: 'wss://6a08-12-75-74-5.ngrok-free.app',
+    });
+    
+    
+    const call = await client.calls.create({
+        from: "+18667574224",
+        to: `+1${phone_number}`,
+        twiml: response.toString(),
+    });
 
+    active_calls[call.sid] = {message_history: [], business, phone_number};
+
+    return call;
 }
 
-
-
-const active_calls = [];
-
-module.exports = { initiate_call }
+module.exports = { initiate_call, active_calls }

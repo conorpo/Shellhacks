@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Outreach Cold Call Results</title>
+    <style>
+        /* The CSS remains unchanged */
+        :root {
+            --background: #0a0a0a;
+            --foreground: #ffffff;
+            --primary: #00ffff;
+            --primary-glow: rgba(0, 255, 255, 0.35);
+            --secondary: #ff00ff;
+            --secondary-glow: rgba(255, 0, 255, 0.35);
+            --muted: #2a2a2a;
+            --muted-foreground: #a0a0a0;
+            --border: #333333;
+            --input: #1a1a1a;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.5;
+            color: var(--foreground);
+            background-color: var(--background);
+            margin: 0;
+            padding: 20px;
+            background-image: radial-gradient(circle at 10% 20%, var(--primary-glow) 0%, transparent 20%), radial-gradient(circle at 90% 80%, var(--secondary-glow) 0%, transparent 20%);
+            background-attachment: fixed;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .card {
+            background-color: rgba(26, 26, 26, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+        
+        .card-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .card-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--primary);
+            text-shadow: 0 0 10px var(--primary-glow);
+        }
+        
+        .card-description {
+            color: var(--muted-foreground);
+            font-size: 18px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: var(--muted);
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: rgba(42, 42, 42, 0.5);
+        }
+
+        .ranking {
+            font-weight: bold;
+        }
+
+        .ranking-1, .ranking-2 { color: var(--secondary); }
+        .ranking-3 { color: var(--muted-foreground); }
+        .ranking-4, .ranking-5 { color: var(--primary); }
+
+        .dropdown-content {
+            display: none;
+            padding: 10px;
+            background-color: var(--input);
+            border: 1px solid var(--border);
+            margin-top: 10px;
+            border-radius: 10px;
+        }
+
+        .dropdown-content.show {
+            display: block;
+        }
+
+        .dropdown-toggle {
+            cursor: pointer;
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        .label {
+            font-weight: bold;
+            color: var(--muted-foreground);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">AI Outreach Cold Call Results</h1>
+                <p class="card-description">Ranked by likelihood to close</p>
+            </div>
+
+            <table id="customerTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone Number</th>
+                        <th>Interest Ranking</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody id="customerList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function fetchCustomerData() {
+            // Retrieve the business name from sessionStorage
+            const businessName = sessionStorage.getItem('businessName');
+    
+            if (!businessName) {
+                console.error("Business name is missing. Redirecting to the configuration page...");
+                window.location.href = 'index.html';  // Redirect to the config page if no business name is found
+                return;
+            }
+    
+            try {
+                //console.log("Fetching customer data for business:", businessName); // Debugging
+                const response = await fetch('../api/fetchResults', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ businessName: businessName }), // Use the dynamic business name
+                });
+    
+                //console.log("Response received:", response); // Debugging
+    
+                if (!response.ok) {
+                    console.error('Failed to fetch data:', response.statusText); // Debugging
+                    throw new Error('Failed to fetch data');
+                }
+    
+                const customers = await response.json();
+                //console.log("Fetched customer data:", customers); // Debugging
+                displayCustomers(customers);
+            } catch (error) {
+                console.error('Error fetching customer data:', error); // Debugging
+            }
+        }
+    
+        function displayCustomers(customers) {
+            //console.log("Displaying customers..."); // Debugging
+            const customerList = document.getElementById('customerList');
+            customerList.innerHTML = '';
+            //console.log("Customer List element:", customerList); // Debugging
+    
+            // Sort customers by ranking (highest to lowest)
+            customers.sort((a, b) => b.customerInfo.ranking - a.customerInfo.ranking);
+            //console.log("Sorted customers by ranking:", customers); // Debugging
+    
+            customers.forEach((customer, index) => {
+                const { name, contactInfo, needs, productsDiscussed, nextSteps, ranking } = customer.customerInfo;
+                //console.log(`Rendering customer ${index + 1}:`, { name, contactInfo, needs, productsDiscussed, nextSteps, ranking }); // Debugging
+    
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${name}</td>
+                    <td>${contactInfo.phone || 'N/A'}</td>
+                    <td><span class="ranking ranking-${ranking}">${ranking}/5</span></td>
+                    <td>
+                        <span class="dropdown-toggle" onclick="toggleDropdown(${index})">View Details</span>
+                        <div id="dropdown-${index}" class="dropdown-content">
+                            <p><span class="label">Needs/Pain Points:</span> ${needs}</p>
+                            <p><span class="label">Products/Services Discussed:</span> ${productsDiscussed}</p>
+                            <p><span class="label">Next Steps:</span> ${nextSteps}</p>
+                        </div>
+                    </td>
+                `;
+                //console.log(`Appending row for ${name}...`); // Debug: Row creation
+                customerList.appendChild(row);
+            });
+    
+            console.log("Customer display complete!"); // Debug: Function completion
+        }
+    
+        function toggleDropdown(index) {
+            //console.log(`Toggling dropdown for index ${index}...`); // Debugging
+            const dropdown = document.getElementById(`dropdown-${index}`);
+            //console.log("Dropdown element:", dropdown); // Debugging
+            dropdown.classList.toggle('show');
+        }
+    
+        // Call the function to fetch and display customers when the page loads
+        window.onload = () => {
+            console.log("Window loaded. Initializing fetch operation."); // Debugging
+            fetchCustomerData();
+        };
+    </script>    
+</body>
+</html>
