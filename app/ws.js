@@ -1,25 +1,37 @@
-const express = require('express');
+const { WebSocketServer } = require("ws");
 
-const ws_router = express.Router();
+function setup_call_listener(port) {
+    
+  const wss = new WebSocketServer({
+  port: port,
+  perMessageDeflate: {
+      zlibDeflateOptions: {
+        // See zlib defaults.
+        chunkSize: 1024,
+        memLevel: 7,
+        level: 3
+      },
+      zlibInflateOptions: {
+        chunkSize: 10 * 1024
+      },
+      // Other options settable:
+      clientNoContextTakeover: true, // Defaults to negotiated value.
+      serverNoContextTakeover: true, // Defaults to negotiated value.
+      serverMaxWindowBits: 10, // Defaults to negotiated value.
+      // Below options specified as default values.
+      concurrencyLimit: 10, // Limits zlib concurrency for perf.
+      threshold: 1024 // Size (in bytes) below which messages
+      // should not be compressed if context takeover is disabled.
+    }
+  });
 
+  wss.on("connection", (ws) => {
+    console.log("connected");
 
+    ws.on("start", data => {
+      console.log(data);
+    })
+  })
+}
 
-ws_router.post("/connect", (req, res) => {
-  console.log("CONNECT: ");
-
-  
-  res.status(200);
-  res.send("test");
-});
-
-ws_router.post("/default", (req, res) => {
-  console.log("DEFAULT: ");
-
-  console.log(req.body.event, req.body.media);
-})
-
-ws_router.post("/disconnect", (req, res) => {
-  console.log("DISCONNECT: ");
-})
-
-module.exports = { ws_router };
+module.exports = { setup_call_listener };
