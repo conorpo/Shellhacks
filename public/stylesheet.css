@@ -1,3 +1,4 @@
+/* Define root color variables */
 :root {
     --background: #0a0a0a;
     --foreground: #ffffff;
@@ -10,6 +11,8 @@
     --border: #333333;
     --input: #1a1a1a;
 }
+
+/* Style the body */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.5;
@@ -22,10 +25,11 @@ body {
         radial-gradient(circle at 90% 80%, var(--secondary-glow) 0%, transparent 20%);
     background-attachment: fixed;
 }
+
+/* Container and card styling */
 .container {
     width: 100%;
     margin: 0 auto;
-    
 }
 .card {
     background-color: rgba(26, 26, 26);
@@ -33,12 +37,14 @@ body {
     border-radius: 20px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     padding: 40px;
-    backdrop-filter: blur(10px);
     width: 50%;
     margin-left: auto;
     margin-right: auto;
+    backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
 }
+
+/* Card header styling */
 .card-header {
     margin-bottom: 32px;
     text-align: center;
@@ -55,6 +61,8 @@ body {
     margin: 0;
     font-size: 18px;
 }
+
+/* Form group styling */
 .form-group {
     margin-bottom: 32px;
 }
@@ -65,6 +73,8 @@ label {
     color: var(--secondary);
     text-shadow: 0 0 5px var(--secondary-glow);
 }
+
+/* Input fields styling */
 input[type="text"],
 textarea {
     width: 100%;
@@ -86,6 +96,8 @@ textarea {
     min-height: 120px;
     resize: vertical;
 }
+
+/* Objectives list styling */
 .objectives-list {
     list-style-type: none;
     padding: 0;
@@ -99,10 +111,14 @@ textarea {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* Objective item styling */
 .objective-item input {
     flex-grow: 1;
     margin-right: 8px;
 }
+
+/* Button styling */
 button {
     background-color: var(--primary);
     color: var(--background);
@@ -124,6 +140,8 @@ button:hover {
 button:active {
     transform: translateY(0);
 }
+
+/* Remove and add button styling */
 .btn-remove {
     background-color: #ff4444;
     padding: 8px 16px;
@@ -140,6 +158,8 @@ button:active {
     background-color: var(--primary);
     box-shadow: 0 0 20px var(--primary-glow);
 }
+
+/* Submit button styling */
 .btn-submit {
     width: 100%;
     margin-top: 32px;
@@ -150,6 +170,45 @@ button:active {
     background-color: var(--secondary);
     box-shadow: 0 0 20px var(--secondary-glow);
 }
+
+/* File upload section styling */
+.file-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.file-upload-label {
+    display: inline-block;
+    padding: 12px 20px;
+    background-color: var(--secondary);
+    color: var(--background);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.file-upload-label:hover {
+    background-color: var(--primary);
+    box-shadow: 0 0 20px var(--primary-glow);
+}
+.file-upload input[type="file"] {
+    display: none;
+}
+.file-name {
+    margin-top: 8px;
+    color: var(--muted-foreground);
+}
+
+/* CSV preview styling */
+#csv-preview {
+    margin-top: 16px;
+    padding: 16px;
+    background-color: var(--muted);
+    border-radius: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Responsive styling */
 @media (max-width: 640px) {
     .container {
         padding: 16px;

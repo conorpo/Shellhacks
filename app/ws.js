@@ -1,37 +1,54 @@
 const { WebSocketServer } = require("ws");
 
+let audioBuffer = [];
+
+const { setup_recognize_stream } = require("../model/stt.js"); 
+
 function setup_call_listener(port) {
-    
-  const wss = new WebSocketServer({
-  port: port,
-  perMessageDeflate: {
-      zlibDeflateOptions: {
-        // See zlib defaults.
-        chunkSize: 1024,
-        memLevel: 7,
-        level: 3
-      },
-      zlibInflateOptions: {
-        chunkSize: 10 * 1024
-      },
-      // Other options settable:
-      clientNoContextTakeover: true, // Defaults to negotiated value.
-      serverNoContextTakeover: true, // Defaults to negotiated value.
-      serverMaxWindowBits: 10, // Defaults to negotiated value.
-      // Below options specified as default values.
-      concurrencyLimit: 10, // Limits zlib concurrency for perf.
-      threshold: 1024 // Size (in bytes) below which messages
-      // should not be compressed if context takeover is disabled.
-    }
-  });
+  const wss = new WebSocketServer({ port: port });
+
+  console.log("WebSocket server hosted on port", port);
 
   wss.on("connection", (ws) => {
-    console.log("connected");
+    const recognize_stream = setup_recognize_stream();
 
-    ws.on("start", data => {
-      console.log(data);
-    })
-  })
+
+    ws.on("message", (message) => {
+      let data;
+
+      try {
+        data = JSON.parse(message);
+      } catch (e) {
+        console.log("Invalid message format");
+        return;
+      }
+
+      if (data.event === "media" && data.media) {
+        //console.log(Object.keys(data.media), Object.keys(data));
+        const audioChunk = Buffer.from(data.media.payload, 'base64');
+
+        audioBuffer.push(audioChunk);
+
+        if (audioBuffer.length > 50) {
+          const combinedChunk = Buffer.concat(audioBuffer);
+          console.log(combinedChunk.byteLength);
+          recognize_stream.write(combinedChunk);
+
+          audioBuffer = [];
+        }
+      }
+
+      if (data.event === "stop") {
+        console.log("Call stopped, closing speaker");
+        recognize_stream.end();
+        ws.close();
+      }
+    });
+
+    ws.on("close", () => {
+      console.log("Connection closed");
+    });
+  });
 }
 
-module.exports = { setup_call_listener };
+module.exports = { setup_call_listener }

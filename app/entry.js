@@ -14,7 +14,7 @@ const options = {
 
 function main() {
   const app = express();
-  
+
   // app.use((req, res, next) => {
   //   console.log(req);
   //   next();
@@ -31,6 +31,6 @@ function main() {
   
   app.listen(3000);
 
-  //initiate_call({},"4074350184");
+  initiate_call({},"4074350184");
 }
 main()

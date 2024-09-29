@@ -4,25 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Calling Outreach Bot Configuration</title>
-    <link rel="stylesheet" href="stylesheet.css" type="text/css">
-    <!-- <link rel="stylesheet" href="connecting dots/styles.css" type="text/css"> -->
+    <link rel="stylesheet" href="stylesheet.css"> <!-- Link to the updated stylesheet -->
 </head>
 <body>
-    <div id="container" class="container">
+    <div class="container">
         <div class="card">
             <div class="card-header">
                 <h1 class="card-title">AI Calling Outreach Bot</h1>
                 <p class="card-description">Configure your next-gen AI sales assistant</p>
             </div>
             <form id="botConfigForm">
+                <!-- Company Name Input -->
                 <div class="form-group">
                     <label for="company-name">Company Name</label>
                     <input type="text" id="company-name" name="company-name" required placeholder="Enter your company name">
                 </div>
+
+                <!-- Services Input -->
                 <div class="form-group">
                     <label for="services">Services Provided</label>
                     <textarea id="services" name="services" required placeholder="Describe the cutting-edge services your company offers"></textarea>
                 </div>
+
+                <!-- AI Bot Objectives Section -->
                 <div class="form-group">
                     <label>AI Bot Objectives</label>
                     <ul id="objectives-list" class="objectives-list">
@@ -32,12 +36,25 @@
                     </ul>
                     <button type="button" id="add-objective" class="btn-add">+ Add Objective</button>
                 </div>
+
+                <!-- CSV File Upload Section -->
+                <div class="form-group">
+                    <label>Upload Call List (CSV)</label>
+                    <div class="file-upload">
+                        <label for="csv-upload" class="file-upload-label">Choose CSV File</label>
+                        <input type="file" id="csv-upload" accept=".csv" />
+                        <span class="file-name" id="file-name"></span>
+                    </div>
+                    <div id="csv-preview"></div>
+                </div>
+
+                <!-- Submit Button -->
                 <button type="submit" class="btn-submit">Activate AI Configuration</button>
             </form>
         </div>
     </div>
-    <!-- <canvas id="canvas" class="canvas"> </canvas> -->
+
+    <!-- JavaScript file for functionality -->
     <script src="main.js"></script>
-    <!-- <script src="connecting dots/connectingdots.js"></script> -->
 </body>
 </html>
